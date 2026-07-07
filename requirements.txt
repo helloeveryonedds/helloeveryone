@@ -1,0 +1,12 @@
+Flask>=2.3.0
+pandas>=1.5.0
+numpy>=1.24.0
+scikit-learn>=1.2.0
+joblib>=1.2.0
+openpyxl>=3.0.0
+<<<<<<< HEAD
+playwright>=1.40.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+=======
+>>>>>>> b73c8c5998bff8646c4d8dd5a12440f9a940bff5

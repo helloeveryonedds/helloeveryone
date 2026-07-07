@@ -1,0 +1,200 @@
+/* ==========================================
+   房价预测系统 - 样式表
+   版本: v0.1（开发中）
+   ========================================== */
+
+/* ---------- 全局 ---------- */
+body {
+    background-color: #f5f7fa;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- 导航栏 ---------- */
+.navbar-custom {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+.navbar-custom .navbar-brand {
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+.brand-icon {
+    font-size: 1.4rem;
+    margin-right: 4px;
+}
+.navbar-custom .nav-link {
+    font-size: 0.95rem;
+    padding: 0.5rem 1rem !important;
+    border-radius: 6px;
+    margin: 0 2px;
+}
+.navbar-custom .nav-link:hover {
+    background: rgba(255,255,255,0.1);
+}
+.navbar-custom .nav-link.active {
+    background: rgba(255,255,255,0.2);
+    font-weight: 500;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+    border: none;
+    border-radius: 12px;
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-1px);
+}
+
+/* ---------- 预测按钮 ---------- */
+.btn-predict {
+    background: linear-gradient(135deg, #1a237e, #3949ab);
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    transition: all 0.3s;
+}
+.btn-predict:hover:not(:disabled) {
+    background: linear-gradient(135deg, #283593, #5c6bc0);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(26,35,126,0.3);
+}
+.btn-predict:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* ---------- 开发中占位 ---------- */
+.development-placeholder {
+    padding: 30px 20px;
+}
+.dev-icon {
+    font-size: 4rem;
+    margin-bottom: 15px;
+}
+.dev-icon-large {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+/* ---------- 结果卡片 ---------- */
+.result-card {
+    background: linear-gradient(135deg, #e8eaf6, #c5cae9);
+    border-radius: 12px;
+    padding: 20px;
+}
+.result-label {
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+.result-price {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #1a237e;
+}
+.result-sub {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #3949ab;
+}
+
+/* ---------- API 代码 ---------- */
+.api-code {
+    background: #e8eaf6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* ---------- 示例项 ---------- */
+.example-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 4px;
+}
+.example-item:hover {
+    background: #e8eaf6;
+}
+
+/* ---------- 统计卡片 ---------- */
+.stat-card {
+    border-radius: 12px;
+    transition: transform 0.2s;
+}
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1a237e;
+}
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+.dev-badge {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    font-size: 0.75rem;
+    padding: 2px 10px;
+    border-radius: 10px;
+    margin-top: 6px;
+}
+
+/* ---------- 图表占位 ---------- */
+.chart-placeholder {
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border-radius: 8px;
+    border: 2px dashed #ddd;
+}
+.placeholder-content {
+    text-align: center;
+    padding: 20px;
+}
+
+/* ---------- 页脚 ---------- */
+.footer {
+    border-top: 1px solid #e0e0e0;
+}
+
+/* ---------- 表单 ---------- */
+.form-label {
+    font-weight: 500;
+    color: #444;
+    font-size: 0.9rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #3949ab;
+    box-shadow: 0 0 0 0.2rem rgba(57,73,171,0.15);
+}
+
+/* ---------- 进度条 ---------- */
+.progress {
+    border-radius: 10px;
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 768px) {
+    .result-price {
+        font-size: 1.6rem;
+    }
+    .stat-value {
+        font-size: 1.4rem;
+    }
+}

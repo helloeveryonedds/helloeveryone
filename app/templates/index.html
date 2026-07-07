@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房价预测系统 - 广州/上海</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <span class="brand-icon">🏠</span> 房价预测系统
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">房价预测</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">数据看板</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 城市选择 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="btn-group city-selector" role="group">
+                    <input type="radio" class="btn-check" name="city" id="cityGZ" value="guangzhou" checked>
+                    <label class="btn btn-outline-primary btn-lg px-4" for="cityGZ">📍 广州</label>
+                    <input type="radio" class="btn-check" name="city" id="citySH" value="shanghai">
+                    <label class="btn btn-outline-primary btn-lg px-4" for="citySH">📍 上海</label>
+                </div>
+                <span class="badge bg-info ms-2" id="cityStats">加载中...</span>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 表单 -->
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">📋 输入房源信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="predictForm">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">面积 (m²) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="area" placeholder="如: 89" step="0.1" min="10" max="1000" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">卧室 <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="bedroom" placeholder="如: 3" min="1" max="10" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">厅</label>
+                                    <input type="number" class="form-control" id="hall" placeholder="如: 1" min="0" max="5" value="1">
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">所在楼层</label>
+                                    <input type="number" class="form-control" id="floor" placeholder="如: 12" min="1" max="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">总楼层 <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="total_floor" placeholder="如: 28" min="1" max="100" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">楼层位置</label>
+                                    <select class="form-select" id="floor_lvl">
+                                        <option value="1">中楼层</option>
+                                        <option value="0">低楼层</option>
+                                        <option value="2">高楼层</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">房龄 (年) <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="age" placeholder="如: 10" min="0" max="70" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">朝向 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="direction" required></select>
+                                </div>
+                                <div class="col-md-4" id="decorationGroup">
+                                    <label class="form-label">装修 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="decoration" required></select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">行政区 <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="district" required></select>
+                                </div>
+                                <div class="col-md-6" id="sCateGroup" style="display:none;">
+                                    <label class="form-label">板块</label>
+                                    <select class="form-select" id="s_cate"></select>
+                                </div>
+                                <div class="col-md-3" id="elevatorGroup">
+                                    <label class="form-label">电梯</label>
+                                    <select class="form-select" id="elevator">
+                                        <option value="1">有电梯</option>
+                                        <option value="0">无电梯</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-predict" id="predictBtn">
+                                    🔮 开始预测
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果 -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">📊 预测结果</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div id="waitingArea">
+                            <div class="py-4">
+                                <div class="dev-icon" style="font-size:3rem;">🏠</div>
+                                <p class="text-muted">填写左侧表单，点击"开始预测"</p>
+                            </div>
+                        </div>
+                        <div id="resultArea" style="display: none;">
+                            <div class="result-card">
+                                <div class="result-label">预测总价</div>
+                                <div class="result-price" id="predictedPrice">¥ 0</div>
+                                <div class="text-muted small mt-1" id="priceRange"></div>
+                                <hr>
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="text-muted small">单价</div>
+                                        <div class="result-sub" id="unitPrice">--</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-muted small">面积</div>
+                                        <div class="result-sub" id="resultAreaText">--</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-muted small">总价</div>
+                                        <div class="result-sub" id="resultTotalPrice">--</div>
+                                    </div>
+                                </div>
+<<<<<<< HEAD
+                                <button class="btn btn-outline-warning btn-sm mt-2" id="favBtn" onclick="saveFavorite()">
+                                    ⭐ 收藏此房源
+                                </button>
+                                <span id="favMsg" class="small text-success ms-2" style="display:none;">已收藏</span>
+=======
+>>>>>>> b73c8c5998bff8646c4d8dd5a12440f9a940bff5
+                            </div>
+                            <div id="loadingSpinner" style="display:none;" class="mt-3">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <p class="text-muted mt-1">预测中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速示例 -->
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">💡 快速示例</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="exampleList"></div>
+                    </div>
+                </div>
+<<<<<<< HEAD
+
+                <!-- 相似房源价格趋势 -->
+                <div class="card shadow-sm mt-3" id="trendCard" style="display:none;">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">📈 相似房源价格趋势</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="trendInfo" class="small text-muted mb-2"></div>
+                        <div id="trendChart" style="height:200px;"></div>
+                        <div id="similarList" class="mt-2 small"></div>
+                    </div>
+                </div>
+
+                <!-- 我的收藏 -->
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">⭐ 我的收藏</h5>
+                        <span class="badge bg-warning" id="favCount">0</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="favList"><p class="text-muted small mb-0">暂无收藏</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 预算推荐 -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card shadow-sm border-success">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h5 class="mb-0">💰 预算推荐</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label">我的预算 (万)</label>
+                                <input type="number" class="form-control" id="budgetInput" placeholder="如: 500" min="50" max="5000">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">城市</label>
+                                <select class="form-select" id="budgetCity">
+                                    <option value="guangzhou">广州</option>
+                                    <option value="shanghai">上海</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-grid">
+                                <button class="btn btn-success" onclick="loadRecommendations()">🔍 推荐配置</button>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <span class="text-muted small">基于链家真实成交数据</span>
+                            </div>
+                        </div>
+                        <div id="recommendResult" class="mt-3"></div>
+                    </div>
+                </div>
+=======
+>>>>>>> b73c8c5998bff8646c4d8dd5a12440f9a940bff5
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-5 py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted small">
+                房价预测系统 v2.0 | 支持广州 · 上海 | 数据来源: 链家
+            </span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<<<<<<< HEAD
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+=======
+>>>>>>> b73c8c5998bff8646c4d8dd5a12440f9a940bff5
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

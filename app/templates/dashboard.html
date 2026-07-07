@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据看板 - 房价预测系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <span class="brand-icon">🏠</span> 房价预测系统
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">房价预测</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard">数据看板</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 城市选择 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="btn-group city-selector" role="group">
+                    <input type="radio" class="btn-check" name="dashCity" id="dashCityGZ" value="guangzhou" checked>
+                    <label class="btn btn-outline-primary btn-lg px-4" for="dashCityGZ">📍 广州</label>
+                    <input type="radio" class="btn-check" name="dashCity" id="dashCitySH" value="shanghai">
+                    <label class="btn btn-outline-primary btn-lg px-4" for="dashCitySH">📍 上海</label>
+                </div>
+                <span class="text-muted ms-2 small">数据看板 — 基于链家二手房数据</span>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="row">
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="stat-icon">🏘️</div>
+                        <div class="stat-value" id="statTotal">--</div>
+                        <div class="stat-label">房源总数</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="statAvgPrice">--</div>
+                        <div class="stat-label">平均总价 (万)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-value" id="statMaxPrice">--</div>
+                        <div class="stat-label">最高总价 (万)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="stat-icon">📐</div>
+                        <div class="stat-value" id="statAvgArea">--</div>
+                        <div class="stat-label">平均面积 (m²)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 房价分布 -->
+        <div class="row">
+            <div class="col-12 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">📊 房价分布</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="priceDistChart" style="height:350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 各区均价 + 朝向 / 板块 -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🏙️ 各区均价</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="districtChart" style="height:400px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3" id="towardPanel">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🧭 朝向分布</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="towardChart" style="height:400px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3" id="shInfoPanel" style="display:none;">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🏙️ 各区房源量</h5>
+                    </div>
+                    <div class="card-body" style="height:400px; overflow-y:auto; padding:0;">
+                        <div id="shDistrictTable"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GZ 专有：户型 + 装修分布 -->
+        <div class="row" id="gzOnlyRow">
+            <div class="col-md-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🛏️ 户型分布</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="bedroomChart" style="height:300px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🔨 装修分布</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="decoChart" style="height:300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 特征重要性 -->
+        <div class="row">
+            <div class="col-12 mb-3">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">⭐ 特征重要性排名</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="featureChart" style="height:400px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<<<<<<< HEAD
+        <!-- 预测活动趋势 -->
+        <div class="row">
+            <div class="col-12 mb-3">
+                <div class="card shadow-sm border-info">
+                    <div class="card-header bg-info bg-opacity-10">
+                        <h5 class="mb-0">📈 预测活动趋势 <span class="small text-muted" id="predTrendInfo"></span></h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="predTrendChart" style="height:250px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最新房源预测验证 -->
+        <div class="row" id="latestPredictionRow">
+            <div class="col-12 mb-3">
+                <div class="card shadow-sm border-warning">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h5 class="mb-0">🆕 最新房源预测验证</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="latestPredictionStatus" class="text-muted text-center py-3">加载中...</div>
+                        <div id="latestPredictionContent" style="display:none;">
+                            <!-- 指标卡片 -->
+                            <div class="row mb-3">
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-2">
+                                            <div class="small text-muted">平均绝对误差 (MAE)</div>
+                                            <div class="h4 mb-0" id="lpMAE">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-2">
+                                            <div class="small text-muted">均方根误差 (RMSE)</div>
+                                            <div class="h4 mb-0" id="lpRMSE">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-2">
+                                            <div class="small text-muted">平均百分比误差 (MAPE)</div>
+                                            <div class="h4 mb-0" id="lpMAPE">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6 mb-2">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-2">
+                                            <div class="small text-muted">验证房源数</div>
+                                            <div class="h4 mb-0" id="lpCount">--</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 偏差方向 -->
+                            <div class="row mb-3">
+                                <div class="col-md-4 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-success me-2" id="lpOverPct">--</span>
+                                        <span class="small">预测偏高 (模型估高)</span>
+                                        <span class="ms-auto text-muted small" id="lpOverCount">--条</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-danger me-2" id="lpUnderPct">--</span>
+                                        <span class="small">预测偏低 (模型估低)</span>
+                                        <span class="ms-auto text-muted small" id="lpUnderCount">--条</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-info text-white me-2" id="lpWithin20">--</span>
+                                        <span class="small">误差 ≤ 20%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 误差分布柱状图 -->
+                            <div class="row mb-3">
+                                <div class="col-md-6 mb-2">
+                                    <h6 class="text-muted">误差分布</h6>
+                                    <div id="lpErrorDistChart" style="height:220px;"></div>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <h6 class="text-muted">各价格区间误差</h6>
+                                    <div id="lpPriceBinChart" style="height:220px;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Top 偏差 -->
+                            <div id="lpTopErrors"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+=======
+>>>>>>> b73c8c5998bff8646c4d8dd5a12440f9a940bff5
+        <!-- API 文档 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">🔌 API 接口</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>方法</th>
+                                        <th>接口</th>
+                                        <th>说明</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="badge bg-success">POST</span></td>
+                                        <td><code>/predict</code></td>
+                                        <td>房价预测</td>
+                                        <td><span class="badge bg-success">已上线</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-primary">GET</span></td>
+                                        <td><code>/api/stats</code></td>
+                                        <td>统计数据（价格分布、各区均价、朝向等）</td>
+                                        <td><span class="badge bg-success">已上线</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-primary">GET</span></td>
+                                        <td><code>/api/districts</code></td>
+                                        <td>行政区列表（含板块、装修、朝向）</td>
+                                        <td><span class="badge bg-success">已上线</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-primary">GET</span></td>
+                                        <td><code>/api/features</code></td>
+                                        <td>模型特征重要性</td>
+                                        <td><span class="badge bg-success">已上线</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-primary">GET</span></td>
+                                        <td><code>/api/cities</code></td>
+                                        <td>支持的城市列表</td>
+                                        <td><span class="badge bg-success">已上线</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-primary">GET</span></td>
+                                        <td><code>/api/history</code></td>
+                                        <td>预测历史记录</td>
+                                        <td><span class="badge bg-secondary">开发中</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted small">
+                房价预测系统 v2.0 | 支持广州 · 上海 | 数据来源: 链家
+            </span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

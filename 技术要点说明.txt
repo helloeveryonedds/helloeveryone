@@ -1,0 +1,277 @@
+房价预测系统 v2.0 — 技术实现要点
+=====================================
+
+一、系统架构
+------------
+
+浏览器 (Bootstrap 5 + ECharts 5)
+      |
+      Fetch API (JSON)
+      |
+Flask Web 服务器 (server.py)
+      |
+      +-- 广州模型 (RandomForest, 16特征)
+      +-- 上海模型 (RandomForest, 12特征)
+      +-- 统计数据处理 (pandas)
+
+端口: 5000   调试模式: on
+模型存储: joblib 序列化 (.pkl)
+
+
+二、数据处理
+------------
+
+2.1 广州数据
+原始: 广州链家二手房数据.xlsx, 15698行 x 18列
+
+ 步骤            方法                                   原始文本示例         提取结果
+ ----            ----                                   --------            --------
+ 室厅解析         re.search(r'(\d+)室')                  "3室2厅"             bedroom=3, hall=2
+ 面积提取         str.extract(r'(\d+\.?\d*)')             "133平米"            area_num=133.0
+ 楼层解析         re.search(r'([低中高])') + r'共(\d+)层' "低楼层(共46层)"     floor_lvl=0, total_floor=46
+ 房龄计算         2026 - year                             "2009年建塔楼"       house_age=17
+ 关注数提取       str.extract(r'(\d+)')                   "266人关注"          follow_num=266
+ 看房数提取       str.extract(r'(\d+)')                   "共400次带看"        visit_num=400
+ 电梯             apply: 1 if "有电梯" else 0             "有电梯"             elevator_num=1
+
+ 朝向清洗:
+   原始 toward 列有 218 种取值（大量脏数据混入）
+   策略: 数字开头 -> "未知" | 纯东南西北 -> 保留 | 其他 -> "其他"
+   结果: 218种 -> 8种（南、南北、东南、北、西南、东、西、其他）
+
+ 装修标准化:
+   "精装修"->"精装"  "简装修"->"简装"  "毛坯房"->"毛坯"
+   "豪华装修"->"豪装"  "普装/中装/粗装"->"其他"
+
+ 标签编码 (LabelEncoder):
+   行政区(area): 11区    朝向(toward): 8种
+   装修(decoration): 4种  街道(street): ~130条
+
+ 衍生特征:
+   room_total = bedroom + hall
+   floor_ratio = floor_lvl / total_floor
+   area_log = log(area_num + 1)
+
+ 异常值过滤 (15698 -> 15418行):
+   price: 10-3000万       area: 15-500 m2
+   bedroom: > 0           house_age: 0-60年
+
+2.2 上海数据
+原始: 上海链家二手房.csv, 73316行 x 12列
+
+ 步骤            方法                                       结果
+ ----            ----                                       ----
+ house_desc解析  "1室0厅|37.6平|低区/6层|朝南"               bedroom, hall, area,
+                 用 split('|') + 正则逐段提取                   floor_lvl, total_floor, direction
+ 区名清洗        str.replace('二手房', '')                    "浦东二手房" -> "浦东"
+ 房龄提取        house_time -> 提取年份 -> 2026 - year          2015年 -> 房龄11年
+ 价格转换        pd.to_numeric(house_price)
+ 标签编码        行政区(18)、板块 s_cate(199)、朝向(7)
+ 衍生特征        room_total, floor_ratio, area_log
+ 异常值过滤      73316 -> 72468行
+                 price 30-3000万  area 15-500m2
+                 bedroom > 0      house_age 0-70年
+
+
+三、训练算法
+------------
+
+两种算法同时训练，选 R2 最高的保存:
+
+ MLP 神经网络:
+   MLPRegressor(
+       hidden_layer_sizes=(256, 128, 64, 32),  4层隐藏层
+       activation='relu',                        激活函数
+       solver='adam',                            优化器
+       learning_rate='adaptive',                 自适应学习率
+       early_stopping=True,                      早停防止过拟合
+       max_iter=500                              最大迭代次数
+   )
+
+ RandomForest:
+   RandomForestRegressor(
+       n_estimators=200,    200棵决策树
+       max_depth=20,        最大深度
+       min_samples_split=5, 内部节点最小样本数
+       min_samples_leaf=2,  叶节点最小样本数
+       n_jobs=-1            多核并行
+   )
+
+ 统一流程:
+   1. train_test_split(X, y, test_size=0.2, random_state=42)  可重现分割
+   2. StandardScaler 标准化（减去均值, 除以标准差）
+   3. MLP 训练 + RF 训练
+   4. 比较 R2，选最优
+   5. joblib 保存模型 + 归一化器 + 特征列名 + 编码器
+
+
+四、训练结果
+------------
+
+4.1 广州模型
+
+              MLP          RandomForest   (最优)
+ R2           0.8372       0.8828
+ RMSE         101.4万       86.1万
+ MAE          63.3万        46.4万
+ 训练样本     12,334        12,334
+ 测试样本     3,084         3,084
+
+ 特征重要性排名:
+ 排名  特征           重要性   含义
+ 1     area_num       29.7%   面积
+ 2     area_log       27.1%   面积(对数)
+ 3     area_code      14.7%   行政区
+ 4     total_floor    10.8%   总楼层
+ 5     street_code     7.2%   街道
+ 6     house_age       3.3%   房龄
+ 7     follow_num      1.8%   关注数
+ 8     floor_ratio     1.1%   楼层比
+ 9     elevator_num    1.1%   电梯
+10     visit_num       1.0%   看房数
+11     toward_code     0.8%   朝向
+12     room_total      0.5%   房间总数
+13     bedroom         0.4%   卧室数
+14     deco_code       0.3%   装修
+15     floor_lvl       0.2%   楼层位置
+16     hall            0.1%   厅数
+
+ 面积(area_num + area_log) 合计占 56.8%
+ 地段(行政区 + 街道) 合计占 21.9%
+
+4.2 上海模型
+
+              MLP          RandomForest   (最优)
+ R2           0.8708       0.9142
+ RMSE         137.3万      111.9万
+ MAE          78.8万        56.2万
+ 训练样本     57,974       57,974
+ 测试样本     14,494       14,494
+
+ 特征重要性排名:
+ 排名  特征            重要性   含义
+ 1     area_num        35.3%   面积
+ 2     area_log        33.3%   面积(对数)
+ 3     district_code   11.1%   行政区
+ 4     total_floor      8.2%   总楼层
+ 5     s_cate_code      5.7%   板块
+ 6     house_age        4.1%   房龄
+ 7     floor_ratio      0.6%   楼层比
+ 8     direction_code   0.6%   朝向
+ 9     room_total       0.4%   房间总数
+10     bedroom          0.4%   卧室数
+11     floor_lvl        0.2%   楼层位置
+12     hall             0.2%   厅数
+
+ 面积(area_num + area_log) 合计占 68.7%
+ 面积在上海的权重远高于广州
+
+4.3 两城市对比
+
+ 维度         广州           上海
+ 样本量       15,418         72,468
+ 特征数       16             12
+ R2           0.8828         0.9142
+ RMSE         86.1万         111.9万
+ 面积权重     56.8%          68.7%
+ 地段权重     21.9%          16.8%
+ 特有特征     关注数,看房数,  板块(s_cate)
+              电梯,装修,街道
+
+
+五、预测系统 (server.py)
+------------------------
+
+5.1 特征构建
+
+ 广州16个特征:
+   bedroom, hall, area_num, room_total,
+   floor_lvl, total_floor, floor_ratio,
+   house_age, follow_num, visit_num, elevator_num,
+   area_code, toward_code, deco_code, street_code,
+   area_log
+
+ 上海12个特征:
+   bedroom, hall, area_num, room_total,
+   floor_lvl, total_floor, floor_ratio,
+   house_age,
+   district_code, direction_code, s_cate_code,
+   area_log
+
+ 安全编码: 训练集未见过的类别 -> 返回0
+   def safe(encoder, value):
+       return encoder.transform([value])[0] if value in encoder.classes_ else 0
+
+5.2 API 接口
+
+ 路由              方法   功能              数据来源
+ /                  GET   预测页面           index.html
+ /dashboard         GET   数据看板           dashboard.html + ECharts
+ /predict           POST  房价预测           RF模型预测
+ /api/stats         GET   统计数据           filtered_data.csv / 上海.csv
+ /api/features      GET   特征重要性         模型 .feature_importances_
+ /api/districts     GET   行政区列表         编码器 .classes_
+ /api/cities        GET   城市列表           ['guangzhou','shanghai']
+
+5.3 预测流程
+
+ 用户提交表单
+   -> build_gz_features(data) / build_sh_features(data)
+   -> 16/12个特征向量
+   -> StandardScaler 标准化
+   -> RandomForest 模型预测
+   -> 返回: 总价(万), 单价(元/m2), 面积
+
+
+六、前端交互
+------------
+
+6.1 预测页面 (main.js + index.html)
+
+ 城市切换: radio按钮 -> loadDistricts() 重新加载下拉选项
+ 动态表单: 广州显示 "装修"+"电梯", 上海显示 "板块"
+ 快速示例: 每城市4个预设, 点击自动填充并预测
+ 价格比较: 从 /api/stats 获取真实均价做对比
+ 结果显示: 总价 + 单价 + 面积 + 价格区间判断
+
+6.2 数据看板 (dashboard.js + dashboard.html)
+
+ 图表             类型              广州  上海
+ 房价分布         柱状图(ECharts)   有    有
+ 各区均价         横向柱状图         有    有
+ 朝向分布         饼图              有    无
+ 户型分布         柱状图             有    无
+ 装修分布         饼图              有    无
+ 各区房源量       表格              无    有
+ 特征重要性排名   横向柱状图         有    有
+
+ 数据来源: /api/stats?city=xx + /api/features?city=xx
+
+
+七、模型文件说明
+----------------
+
+ 文件                              大小       城市   说明
+ model/best_model.pkl              66-75MB   广州   RandomForest模型
+ model/scaler.pkl                  1KB       广州   StandardScaler参数
+ model/feature_cols.pkl            1KB       广州   特征列名列表
+ model/encoders.pkl                3KB       广州   LabelEncoder字典(4个)
+ model/sh_model.pkl                233-262MB 上海   RandomForest模型
+ model/sh_scaler.pkl               1KB       上海   StandardScaler参数
+ model/sh_feature_cols.pkl         1KB       上海   特征列名列表
+ model/sh_encoders.pkl             3KB       上海   LabelEncoder字典(3个)
+ model/filtered_data.csv           4MB       广州   清洗后数据(用于看板统计)
+
+
+八、关键技术决策
+----------------
+
+ 决策项目        选择                  理由
+ 模型算法        RandomForest > MLP    RF在两城市均更优
+ 广州特征数      16                    原始数据字段丰富
+ 上海特征数      12                    无关注数/看房数/电梯/装修等字段
+ 未知类别处理    safe()返回0           保证新数据不报错
+ 数据分箱        pd.cut分11档          直观展示房价分布(0-3000万)
+ 前端图表        ECharts 5             交互丰富, 中文支持好
+ 路径设计        __file__相对路径       任意目录可运行
+ 一键启动        start.bat             自动安装依赖+启动服务
